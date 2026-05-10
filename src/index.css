@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #0a1628;
+  color: #e2e8f0;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a1628; }
+::-webkit-scrollbar-thumb { background: #1C7293; border-radius: 4px; }
+
+/* ── Glass card ── */
+.glass-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+.glass-card:hover {
+  border-color: rgba(0,168,150,0.4);
+  box-shadow: 0 8px 32px rgba(0,168,150,0.15);
+  transform: translateY(-2px);
+}
+
+/* ── Gradient bg ── */
+.dashboard-bg {
+  background: linear-gradient(135deg, #0a1628 0%, #0d2137 40%, #0a1628 100%);
+  min-height: 100vh;
+}
+
+/* ── Status badges ── */
+.badge-optimal  { background: rgba(40,167,69,0.2);  color: #4ade80; border: 1px solid rgba(40,167,69,0.4); }
+.badge-good     { background: rgba(40,167,69,0.15); color: #86efac; border: 1px solid rgba(40,167,69,0.3); }
+.badge-warning  { background: rgba(255,193,7,0.2);  color: #fde047; border: 1px solid rgba(255,193,7,0.4); }
+.badge-stressed { background: rgba(255,193,7,0.2);  color: #fde047; border: 1px solid rgba(255,193,7,0.4); }
+.badge-critical { background: rgba(220,53,69,0.2);  color: #f87171; border: 1px solid rgba(220,53,69,0.4); }
+.badge-online   { background: rgba(40,167,69,0.2);  color: #4ade80; border: 1px solid rgba(40,167,69,0.4); }
+.badge-offline  { background: rgba(220,53,69,0.2);  color: #f87171; border: 1px solid rgba(220,53,69,0.4); }
+
+/* ── Metric row ── */
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.82rem;
+}
+.metric-row:last-child { border-bottom: none; }
+.metric-label { color: #94a3b8; }
+.metric-value { color: #e2e8f0; font-weight: 600; font-size: 0.88rem; }
+
+/* ── Progress bar ── */
+.progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── Pump animation ── */
+@keyframes waterDrop {
+  0%   { transform: translateY(-8px) scale(0.8); opacity: 0; }
+  50%  { opacity: 1; }
+  100% { transform: translateY(12px) scale(1.1); opacity: 0; }
+}
+.water-drop { animation: waterDrop 1.2s ease-in-out infinite; }
+.water-drop:nth-child(2) { animation-delay: 0.4s; }
+.water-drop:nth-child(3) { animation-delay: 0.8s; }
+
+/* ── Card shimmer loading ── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ── Pulse dot ── */
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.6; }
+}
+.pulse-dot { animation: pulseDot 1.5s ease-in-out infinite; }
+
+/* ── Glow text ── */
+.glow-text {
+  text-shadow: 0 0 20px rgba(0,168,150,0.6);
+}
+
+/* ── Header gradient ── */
+.header-gradient {
+  background: linear-gradient(135deg, rgba(6,90,130,0.9) 0%, rgba(28,114,147,0.8) 50%, rgba(0,168,150,0.7) 100%);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0,168,150,0.3);
+}
+
+/* ── Footer ── */
+.footer-bar {
+  background: rgba(6,90,130,0.3);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0,168,150,0.2);
+}
+
+/* ── Chart tooltips ── */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: rgba(13,33,55,0.95) !important;
+  border: 1px solid rgba(0,168,150,0.4) !important;
+  border-radius: 8px !important;
+  color: #e2e8f0 !important;
+}
+
+/* ── Card section headers ── */
+.card-header {
+  background: linear-gradient(135deg, rgba(6,90,130,0.4) 0%, rgba(0,168,150,0.2) 100%);
+  border-radius: 10px 10px 0 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0,168,150,0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Alert animations ── */
+@keyframes alertSlide {
+  from { transform: translateX(-20px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.alert-item { animation: alertSlide 0.3s ease; }
+
+/* ── Energy bar ── */
+.energy-segment {
+  transition: height 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── Data update flash ── */
+@keyframes dataFlash {
+  0%   { background: rgba(0,168,150,0.2); }
+  100% { background: transparent; }
+}
+.data-flash { animation: dataFlash 0.5s ease; }
+
+/* ── Recharts overrides ── */
+.recharts-cartesian-grid line { stroke: rgba(255,255,255,0.05); }
+.recharts-text { fill: #94a3b8 !important; font-size: 11px; }
+.recharts-legend-item-text { color: #94a3b8 !important; font-size: 11px; }
