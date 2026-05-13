@@ -7,6 +7,7 @@ import WaterSystemCard from './components/WaterSystemCard';
 import ChickenCard from './components/ChickenCard';
 import FishTankCard from './components/FishTankCard';
 import HydroponicsCard from './components/HydroponicsCard';
+import MotorControlCard from './components/MotorControlCard';
 import MoistureGraph from './components/MoistureGraph';
 import EnergyGraph from './components/EnergyGraph';
 import SettingsPanel from './components/SettingsPanel';
@@ -66,10 +67,19 @@ export default function App() {
 
   // ─ Sensor State ─
   const [moisture, setMoisture]               = useState(68);
-  const [pumpOn, setPumpOn]                   = useState(false);
-  const [pumpSeconds, setPumpSeconds]         = useState(0);
-  const [connected, setConnected]             = useState(false);
   const [moistureHistory, setMoistureHistory] = useState([]);
+  const [connected, setConnected]             = useState(false);
+
+  // ─ Motor Modes (AUTO / ON / OFF) ─
+  const [dripMotorMode, setDripMotorMode] = useState('AUTO');
+  const [wellMotorMode, setWellMotorMode] = useState('AUTO');
+  const [fishMotorMode, setFishMotorMode] = useState('AUTO');
+
+  // ─ Motor Running States ─
+  const [dripMotorOn, setDripMotorOn]         = useState(false);
+  const [wellMotorOn, setWellMotorOn]         = useState(false);
+  const [fishMotorOn, setFishMotorOn]         = useState(false);
+  const [pumpSeconds, setPumpSeconds]         = useState(0);
 
   const [energy, setEnergy]                   = useState(null);
   const [energyHistory, setEnergyHistory]     = useState([]);
@@ -84,13 +94,22 @@ export default function App() {
 
   // Pump duration timer
   const pumpTimerRef = useRef(null);
-  // Store latest moisture for closure access
-  const moistureRef  = useRef(68);
-  const pumpOnRef    = useRef(false);
+  
+  // Refs to access latest state in closures
+  const moistureRef    = useRef(68);
+  const dripMotorOnRef = useRef(false);
+  const wellMotorOnRef = useRef(false);
+  const dripModeRef    = useRef('AUTO');
+  const wellModeRef    = useRef('AUTO');
+  const fishModeRef    = useRef('AUTO');
 
   // Keep refs in sync
-  useEffect(() => { moistureRef.current = moisture; }, [moisture]);
-  useEffect(() => { pumpOnRef.current   = pumpOn;   }, [pumpOn]);
+  useEffect(() => { moistureRef.current    = moisture; }, [moisture]);
+  useEffect(() => { dripMotorOnRef.current = dripMotorOn; }, [dripMotorOn]);
+  useEffect(() => { wellMotorOnRef.current = wellMotorOn; }, [wellMotorOn]);
+  useEffect(() => { dripModeRef.current    = dripMotorMode; }, [dripMotorMode]);
+  useEffect(() => { wellModeRef.current    = wellMotorMode; }, [wellMotorMode]);
+  useEffect(() => { fishModeRef.current    = fishMotorMode; }, [fishMotorMode]);
 
   // ─ Moisture / ESP32 tick ─
   const moistureTick = useCallback(async () => {
@@ -101,20 +120,24 @@ export default function App() {
 
     if (esp32) {
       m          = esp32.moisture;
-      pumpStatus = esp32.pumpStatus;
+      pumpStatus = esp32.pumpStatus; // hardware override
       setConnected(true);
     } else {
       // Simulated: random walk around last value
       const prev = moistureRef.current;
       m          = parseFloat(Math.min(100, Math.max(0, prev + (Math.random() - 0.48) * 3)).toFixed(1));
-      pumpStatus = m < 60 ? true : m > 75 ? false : pumpOnRef.current;
+      
+      if (dripModeRef.current === 'ON') pumpStatus = true;
+      else if (dripModeRef.current === 'OFF') pumpStatus = false;
+      else pumpStatus = m < 60 ? true : m > 75 ? false : dripMotorOnRef.current;
+      
       setConnected(false);
     }
 
     setMoisture(m);
 
     // Pump state changes
-    setPumpOn((prev) => {
+    setDripMotorOn((prev) => {
       if (pumpStatus !== prev) {
         if (pumpStatus) {
           setPumpSeconds(0);
@@ -143,8 +166,29 @@ export default function App() {
     setChicken(generateChickenData());
     setFish(generateFishData());
     setHydro(generateHydroData());
-    setWater(generateWaterData(pumpOnRef.current));
+    
+    const newWater = generateWaterData(dripMotorOnRef.current, wellMotorOnRef.current);
+    setWater(newWater);
+    
     setEnergy(generateEnergyData());
+
+    // ─ Automated Motor Logic ─
+    if (wellModeRef.current === 'ON') setWellMotorOn(true);
+    else if (wellModeRef.current === 'OFF') setWellMotorOn(false);
+    else {
+      // AUTO
+      if (newWater.reservoir < 40) setWellMotorOn(true);
+      else if (newWater.reservoir > 90) setWellMotorOn(false);
+    }
+
+    if (fishModeRef.current === 'ON') setFishMotorOn(true);
+    else if (fishModeRef.current === 'OFF') setFishMotorOn(false);
+    else {
+      // AUTO
+      if (newWater.tds > 580) setFishMotorOn(true);
+      else if (newWater.tds < 550) setFishMotorOn(false);
+    }
+
   }, []);
 
   // ─ Energy history tick ─
@@ -208,7 +252,7 @@ export default function App() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ minHeight: '240px' }}>
           <SugarcaneCard moisture={moisture} sugarcane={sugarcane} lastUpdate={lastUpdate} simPaused={simPaused} onMoistureChange={setMoisture} />
           <EnergyCard    energy={energy} simPaused={simPaused} onEnergyChange={handleEnergyChange} />
-          <WaterSystemCard water={water} pumpOn={pumpOn} pumpDuration={formatDuration(pumpSeconds)} simPaused={simPaused} />
+          <WaterSystemCard water={water} pumpOn={dripMotorOn} pumpDuration={formatDuration(pumpSeconds)} simPaused={simPaused} />
         </div>
 
         {/* ── Row 2: Chicken / Fish / Hydro ── */}
@@ -218,7 +262,17 @@ export default function App() {
           <HydroponicsCard hydro={hydro}    simPaused={simPaused} />
         </div>
 
-        {/* ── Row 3: Graphs ── */}
+        {/* ── Row 3: IoT Motor Controls ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <MotorControlCard 
+            dripMotorOn={dripMotorOn} dripMotorMode={dripMotorMode} setDripMotorMode={setDripMotorMode}
+            wellMotorOn={wellMotorOn} wellMotorMode={wellMotorMode} setWellMotorMode={setWellMotorMode}
+            fishMotorOn={fishMotorOn} fishMotorMode={fishMotorMode} setFishMotorMode={setFishMotorMode}
+            simPaused={simPaused}
+          />
+        </div>
+
+        {/* ── Row 4: Graphs ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" style={{ minHeight: '280px' }}>
           <MoistureGraph data={visibleMoisture} simPaused={simPaused} />
           <EnergyGraph   data={energyHistory}   simPaused={simPaused} />

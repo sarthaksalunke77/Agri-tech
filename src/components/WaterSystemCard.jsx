@@ -60,7 +60,7 @@ export default function WaterSystemCard({ water, pumpOn, pumpDuration, simPaused
           </div>
           <div>
             <div className="text-sm font-bold text-white">
-              {pumpOn ? '🟢 Pump Active' : '⚫ Pump Idle'}
+              {pumpOn ? '🟢 Drip Motor Active' : '⚫ Drip Motor Idle'}
             </div>
             <div className="text-xs text-slate-400">
               {pumpOn ? `Irrigating: ${pumpDuration}` : 'Awaiting moisture threshold'}

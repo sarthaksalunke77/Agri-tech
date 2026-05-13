@@ -126,16 +126,33 @@ export function generateHydroData() {
   };
 }
 
+let prevTds = 575;
+let prevRes = 85;
+
 // ── Water Quality (5-acre scale) ──────────────
-export function generateWaterData(pumpOn = false) {
+export function generateWaterData(dripMotorOn = false, wellMotorOn = false) {
+  // TDS drifts slowly
+  prevTds += (Math.random() - 0.4) * 8; // slight upward drift
+  prevTds = Math.max(500, Math.min(prevTds, 650));
+
+  // Reservoir logic
+  if (wellMotorOn) {
+    prevRes += 3; // filling
+  } else if (dripMotorOn) {
+    prevRes -= 0.8; // draining quickly
+  } else {
+    prevRes -= 0.1; // draining slowly
+  }
+  prevRes = Math.max(10, Math.min(prevRes, 100));
+
   return {
     ph:         parseFloat(rand(6.5, 7.2).toFixed(1)),
     ec:         parseFloat(rand(1.0, 1.5).toFixed(2)),
-    tds:        Math.round(rand(500, 750)),
+    tds:        Math.round(prevTds),
     temp:       parseFloat(rand(22, 26).toFixed(1)),
     // Larger pump for 5 acres
-    flowRate:   pumpOn ? parseFloat(rand(8.5, 12.0).toFixed(1)) : 0,
-    reservoir:  Math.round(rand(75, 92)),
+    flowRate:   dripMotorOn ? parseFloat(rand(8.5, 12.0).toFixed(1)) : 0,
+    reservoir:  Math.round(prevRes),
     // Daily volume needed for 5 acres
     dailyUsage: Math.round(rand(22000, 28000)), // litres/day for 5 acres
   };
