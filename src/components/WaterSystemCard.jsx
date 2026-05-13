@@ -14,7 +14,7 @@ function WaterDrop({ delay = 0 }) {
   );
 }
 
-export default function WaterSystemCard({ water, pumpOn, pumpDuration, simPaused }) {
+export default function WaterSystemCard({ water, pumpOn, pumpDuration, simPaused, onTdsChange }) {
   if (!water) return <div className="glass-card h-64 shimmer" />;
 
   const phColor = water.ph >= 6.5 && water.ph <= 7.5 ? '#28a745' : '#ffc107';
@@ -78,15 +78,25 @@ export default function WaterSystemCard({ water, pumpOn, pumpDuration, simPaused
           {[
             { icon: <FlaskConical size={13} className="text-cyan-400" />, label: 'pH', value: water.ph, color: phColor },
             { icon: <Gauge size={13} className="text-purple-400" />, label: 'EC', value: `${water.ec} mS/cm`, color: '#c084fc' },
-            { icon: <Droplets size={13} className="text-blue-400" />, label: 'TDS', value: `${water.tds} ppm`, color: '#60a5fa' },
+            { icon: <Droplets size={13} className="text-blue-400" />, label: 'TDS', value: `${water.tds} ppm`, color: '#60a5fa', isTds: true },
             { icon: <Thermometer size={13} className="text-orange-400" />, label: 'Temp', value: `${water.temp}°C`, color: '#fb923c' },
           ].map((m, i) => (
-            <div key={i} className="rounded-lg bg-white/5 p-2.5 flex items-center gap-2">
-              {m.icon}
-              <div>
-                <div className="text-[10px] text-slate-500">{m.label}</div>
-                <div className="text-sm font-bold" style={{ color: m.color }}>{m.value}</div>
+            <div key={i} className="rounded-lg bg-white/5 p-2.5 flex flex-col justify-center">
+              <div className="flex items-center gap-2">
+                {m.icon}
+                <div>
+                  <div className="text-[10px] text-slate-500">{m.label}</div>
+                  <div className="text-sm font-bold" style={{ color: m.color }}>{m.value}</div>
+                </div>
               </div>
+              {m.isTds && simPaused && (
+                <input 
+                  type="range" min="0" max="1000" value={water.tds} 
+                  onChange={e => onTdsChange && onTdsChange(Number(e.target.value))}
+                  className="w-full mt-2 h-1 rounded-full appearance-none bg-white/10 outline-none cursor-pointer"
+                  style={{ accentColor: m.color }}
+                />
+              )}
             </div>
           ))}
         </div>

@@ -111,6 +111,21 @@ export default function App() {
   useEffect(() => { wellModeRef.current    = wellMotorMode; }, [wellMotorMode]);
   useEffect(() => { fishModeRef.current    = fishMotorMode; }, [fishMotorMode]);
 
+  const handleSetDripMotor = useCallback((status) => {
+    setDripMotorOn((prev) => {
+      if (status !== prev) {
+        if (status) {
+          setPumpSeconds(0);
+          clearInterval(pumpTimerRef.current);
+          pumpTimerRef.current = setInterval(() => setPumpSeconds((s) => s + 1), 1000);
+        } else {
+          clearInterval(pumpTimerRef.current);
+        }
+      }
+      return status;
+    });
+  }, []);
+
   // ─ Moisture / ESP32 tick ─
   const moistureTick = useCallback(async () => {
     if (simPausedRef.current) return; // ◀ PAUSED – skip update
@@ -122,32 +137,15 @@ export default function App() {
       m          = esp32.moisture;
       pumpStatus = esp32.pumpStatus; // hardware override
       setConnected(true);
+      handleSetDripMotor(pumpStatus);
     } else {
       // Simulated: random walk around last value
       const prev = moistureRef.current;
       m          = parseFloat(Math.min(100, Math.max(0, prev + (Math.random() - 0.48) * 3)).toFixed(1));
-      
-      if (dripModeRef.current === 'ON') pumpStatus = true;
-      else if (dripModeRef.current === 'OFF') pumpStatus = false;
-      else pumpStatus = m < 60 ? true : m > 75 ? false : dripMotorOnRef.current;
-      
       setConnected(false);
     }
 
     setMoisture(m);
-
-    // Pump state changes
-    setDripMotorOn((prev) => {
-      if (pumpStatus !== prev) {
-        if (pumpStatus) {
-          setPumpSeconds(0);
-          pumpTimerRef.current = setInterval(() => setPumpSeconds((s) => s + 1), 1000);
-        } else {
-          clearInterval(pumpTimerRef.current);
-        }
-      }
-      return pumpStatus;
-    });
 
     // Append to history (rolling 30-min window)
     setMoistureHistory((prev) => {
@@ -158,7 +156,7 @@ export default function App() {
 
     setDataCount((c) => c + 1);
     setLastUpdate('just now');
-  }, []);
+  }, [handleSetDripMotor]);
 
   // ─ Sensor tick (chicken / fish / hydro / water / energy) ─
   const sensorTick = useCallback(() => {
@@ -171,25 +169,35 @@ export default function App() {
     setWater(newWater);
     
     setEnergy(generateEnergyData());
-
-    // ─ Automated Motor Logic ─
-    if (wellModeRef.current === 'ON') setWellMotorOn(true);
-    else if (wellModeRef.current === 'OFF') setWellMotorOn(false);
-    else {
-      // AUTO
-      if (newWater.reservoir < 40) setWellMotorOn(true);
-      else if (newWater.reservoir > 90) setWellMotorOn(false);
-    }
-
-    if (fishModeRef.current === 'ON') setFishMotorOn(true);
-    else if (fishModeRef.current === 'OFF') setFishMotorOn(false);
-    else {
-      // AUTO
-      if (newWater.tds > 580) setFishMotorOn(true);
-      else if (newWater.tds < 550) setFishMotorOn(false);
-    }
-
   }, []);
+
+  // ─ Automated Motor Logic (Runs even when paused to react to manual sliders) ─
+  useEffect(() => {
+    if (dripMotorMode === 'ON') handleSetDripMotor(true);
+    else if (dripMotorMode === 'OFF') handleSetDripMotor(false);
+    else {
+      if (moisture < 60) handleSetDripMotor(true);
+      else if (moisture > 75) handleSetDripMotor(false);
+    }
+  }, [moisture, dripMotorMode, handleSetDripMotor]);
+
+  useEffect(() => {
+    if (!water) return;
+
+    if (wellMotorMode === 'ON') setWellMotorOn(true);
+    else if (wellMotorMode === 'OFF') setWellMotorOn(false);
+    else {
+      if (water.reservoir < 40) setWellMotorOn(true);
+      else if (water.reservoir > 90) setWellMotorOn(false);
+    }
+
+    if (fishMotorMode === 'ON') setFishMotorOn(true);
+    else if (fishMotorMode === 'OFF') setFishMotorOn(false);
+    else {
+      if (water.tds > 580) setFishMotorOn(true);
+      else if (water.tds < 550) setFishMotorOn(false);
+    }
+  }, [water?.reservoir, water?.tds, wellMotorMode, fishMotorMode]);
 
   // ─ Energy history tick ─
   const energyHistoryTick = useCallback(() => {
@@ -219,6 +227,10 @@ export default function App() {
       clearInterval(pumpTimerRef.current);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleTdsChange = useCallback((newTds) => {
+    setWater(prev => prev ? { ...prev, tds: newTds } : null);
+  }, []);
 
   // ─ Derived state ─
   const sugarcane     = calculateSugarcaneHealth(moisture);
@@ -252,13 +264,13 @@ export default function App() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ minHeight: '240px' }}>
           <SugarcaneCard moisture={moisture} sugarcane={sugarcane} lastUpdate={lastUpdate} simPaused={simPaused} onMoistureChange={setMoisture} />
           <EnergyCard    energy={energy} simPaused={simPaused} onEnergyChange={handleEnergyChange} />
-          <WaterSystemCard water={water} pumpOn={dripMotorOn} pumpDuration={formatDuration(pumpSeconds)} simPaused={simPaused} />
+          <WaterSystemCard water={water} pumpOn={dripMotorOn} pumpDuration={formatDuration(pumpSeconds)} simPaused={simPaused} onTdsChange={handleTdsChange} />
         </div>
 
         {/* ── Row 2: Chicken / Fish / Hydro ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ minHeight: '240px' }}>
           <ChickenCard    chicken={chicken} simPaused={simPaused} onChickenChange={setChicken} />
-          <FishTankCard   fish={fish}       simPaused={simPaused} />
+          <FishTankCard   fish={fish} water={water} simPaused={simPaused} onTdsChange={handleTdsChange} />
           <HydroponicsCard hydro={hydro}    simPaused={simPaused} />
         </div>
 

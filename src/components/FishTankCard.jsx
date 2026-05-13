@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function FishTankCard({ fish, simPaused }) {
+export default function FishTankCard({ fish, water, simPaused, onTdsChange }) {
   if (!fish) return <div className="glass-card h-64 shimmer" />;
 
   const oxygenColor = fish.oxygen >= 7.5 ? '#4ade80' : fish.oxygen >= 7.0 ? '#fde047' : '#f87171';
@@ -90,14 +90,38 @@ export default function FishTankCard({ fish, simPaused }) {
         </div>
 
         {/* O2 bar */}
-        <div className="mt-auto">
-          <div className="flex justify-between text-[9px] text-slate-500 mb-1">
-            <span>Dissolved O₂ (min 7.0 mg/L)</span>
-            <span style={{ color: oxygenColor }}>{fish.oxygen} mg/L</span>
+        <div className="mt-auto space-y-2">
+          <div>
+            <div className="flex justify-between text-[9px] text-slate-500 mb-1">
+              <span>Dissolved O₂ (min 7.0 mg/L)</span>
+              <span style={{ color: oxygenColor }}>{fish.oxygen} mg/L</span>
+            </div>
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: `${(fish.oxygen / 12) * 100}%`, background: oxygenColor }} />
+            </div>
           </div>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${(fish.oxygen / 12) * 100}%`, background: oxygenColor }} />
-          </div>
+          
+          {/* TDS bar */}
+          {water && (
+            <div>
+              <div className="flex justify-between text-[9px] text-slate-500 mb-1">
+                <span>Water TDS (Max 580 ppm)</span>
+                <span style={{ color: '#60a5fa' }}>{water.tds} ppm</span>
+              </div>
+              {simPaused ? (
+                <input 
+                  type="range" min="0" max="1000" value={water.tds} 
+                  onChange={e => onTdsChange && onTdsChange(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-full appearance-none bg-white/10 outline-none cursor-pointer"
+                  style={{ accentColor: '#60a5fa' }}
+                />
+              ) : (
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${(water.tds / 1000) * 100}%`, background: '#60a5fa' }} />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
